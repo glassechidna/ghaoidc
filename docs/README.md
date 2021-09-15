@@ -73,5 +73,12 @@ While building this I learned that AWS STS enforces a limit of approximately
 complete GHA OIDC JWT exceeds. You can choose which values to pass through as
 tags in the CFN template - I've selected what I think are useful defaults.
 
+## I hate this
+
+Honestly, kinda the same. I'd prefer it not to exist. I highly recommend filing
+a feature request with AWS asking for the ability to map arbitrary claims in
+OIDC tokens to role session tags in `sts:AssumeRoleWithWebIdentity`. If we all
+nag enough, maybe they'll do it.
+
 [launch]: https://awsteele.com/blog/2021/09/15/aws-federation-comes-to-github-actions.html
 [session-tags]: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_session-tags.html
