@@ -1,0 +1,19 @@
+{
+  "name": "ghaoidc",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "esbuild src/index.js --outfile=dist/index.js --target=node12 --platform=node --minify --bundle",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@actions/core": "^1.5.0",
+    "node-fetch": "^3.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.12.28"
+  }
+}

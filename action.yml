@@ -1,0 +1,15 @@
+name: ghaoidc
+description: Assumes roles in AWS that have useful role session tags
+runs:
+  using: node12
+  main: action/dist/index.js
+inputs:
+  apiUrl:
+    description: The URL of the API that vends credentials
+    required: true
+  roleArn:
+    description: The full ARN of the role you want to assume
+    required: true
+  transitiveTags:
+    description: Optional tags that you want to pass through role session chaining
+    required: false

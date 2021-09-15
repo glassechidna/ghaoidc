@@ -1,0 +1,77 @@
+Parameters:
+  TrustedAccountId:
+    Type: String
+  TrustedRoleName:
+    Type: String
+    Default: GithubActions
+
+Resources:
+  RoleThatTrustsAnyRepo:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns: [ arn:aws:iam::aws:policy/ReadOnlyAccess ]
+      Tags:
+          # this only allows roles specifically intended to be assumed by GHA
+          # to be assumed. this avoids the scenario where a role might trust
+          # our account's :root but didn't have GHA in mind.
+        - Key: ghaoidc
+          Value: true
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              # the reason why we trust :root here and the specific role
+              # in a condition block is so that if the lambda's cfn stack
+              # is destroyed and recreated, it won't require *this* trust
+              # policy to be recreated. TODO: find a doc that explains this
+              AWS: !Sub arn:aws:iam::${TrustedAccountId}:root
+            Condition:
+              StringEquals:
+                aws:PrincipalArn: !Sub arn:aws:iam::${TrustedAccountId}:role/${TrustedRoleName}
+          - Effect: Allow
+            Action: sts:TagSession
+            Principal:
+              AWS: !Sub arn:aws:iam::${TrustedAccountId}:root
+            Condition:
+              # this allows GHA to set any tags it pleases as long as they
+              # begin with gha_
+              ForAllValues:StringLike:
+                aws:TagKeys: gha_*
+
+  RoleThatOnlyWorksForMainPush:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns: [ arn:aws:iam::aws:policy/ReadOnlyAccess ]
+      Tags:
+          # see above
+        - Key: ghaoidc
+          Value: true
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              # explanation is as above
+              AWS: !Sub arn:aws:iam::${TrustedAccountId}:root
+            Condition:
+              StringEquals:
+                aws:PrincipalArn: !Sub arn:aws:iam::${TrustedAccountId}:role/${TrustedRoleName}
+                # this role can only be assumed for jobs triggered by pushes
+                # to the "main" branch
+                aws:RequestTag/gha_event_name: push
+                aws:RequestTag/gha_ref: refs/heads/main
+          - Effect: Allow
+            Action: sts:TagSession
+            Principal:
+              AWS: !Sub arn:aws:iam::${TrustedAccountId}:root
+            Condition:
+              # as above
+              ForAllValues:StringLike:
+                aws:TagKeys: gha_*
+
+Outputs:
+  RoleThatTrustsAnyRepo:
+    Value: !GetAtt RoleThatTrustsAnyRepo.Arn
+  RoleThatOnlyWorksForMainPush:
+    Value: !GetAtt RoleThatOnlyWorksForMainPush.Arn

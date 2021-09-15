@@ -1,0 +1,115 @@
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  RoleName: # see explanation below for explicit IAM role name rationale
+    Type: String
+    Default: GithubActions
+  PermittedGithubOwner: # see below for explanation
+    Type: String
+  TagKeyPrefix: # see below for explanation
+    Type: String
+    Default: gha_
+  ClaimsAllowList: # see below for explanation
+    Type: String
+    Default: >
+      actor
+      event_name
+      ref
+      repository
+      run_attempt
+      run_id
+      run_number
+      sha
+      workflow
+
+Resources:
+  Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Role: !GetAtt Role.Arn
+      CodeUri: ./api/bootstrap
+      Handler: bootstrap
+      AutoPublishAlias: live
+      Runtime: provided.al2
+      Timeout: 30
+      Environment:
+        Variables:
+          # we don't want collisions with other types of tags (e.g. someone
+          # might use the "actor" tag for something else) so we prefix all
+          # our session tags with something like gha_ (default value)
+          TAG_KEY_PREFIX: !Ref TagKeyPrefix
+
+          # we have to create an explicit allow list for claims to use as
+          # role session tags because it seems there's a 500 byte limit
+          # to session tags
+          CLAIMS_ALLOW_LIST: !Ref ClaimsAllowList
+
+          # even if:
+          #   * someone gets the API GW url
+          #   * the claims allow list doesn't include repo or owner
+          #   * or the downstream trust policy isn't explicit about owner
+          #  then here's our safeguard
+          PERMITTED_GITHUB_OWNER: !Ref PermittedGithubOwner
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      # we use a hardcoded role name because folks might want to use an aws:PrincipalArn
+      # condition rather than a specific "Principal" in their trust policies. that would
+      # mean that we can delete this stack and recreate it without breaking the downstream
+      # trust policies
+      RoleName: !Ref RoleName
+      ManagedPolicyArns: [arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: lambda.amazonaws.com
+      Policies:
+        - PolicyName: AllowRoleAssumption
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: sts:AssumeRole
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    # this only allows roles specifically intended to be assumed by GHA
+                    # to be assumed. this avoids the scenario where a role might trust
+                    # our account's :root but didn't have GHA in mind.
+                    aws:ResourceTag/ghaoidc: true
+              - Effect: Allow
+                Action: sts:TagSession
+                Resource: "*"
+                Condition:
+                  # this is a sanity check to verify that we can only set tags that
+                  # begin with our prefix (e.g. gha_). can't hurt and can make IAM
+                  # admins happy
+                  ForAllValues:StringLike:
+                    aws:TagKeys: !Sub ${TagKeyPrefix}*
+
+  Api:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Auth:
+        DefaultAuthorizer: OAuth2Authorizer
+        Authorizers:
+          OAuth2Authorizer:
+            IdentitySource: $request.header.Authorization
+            JwtConfiguration:
+              issuer: https://vstoken.actions.githubusercontent.com
+              audience: [sigstore] # at the time of writing this is the only audience GHA accepts
+
+Outputs:
+  Function:
+    Value: !Ref Function.Version
+  Url:
+    Value: !GetAtt Api.ApiEndpoint
