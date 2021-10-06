@@ -105,7 +105,7 @@ Resources:
           OAuth2Authorizer:
             IdentitySource: $request.header.Authorization
             JwtConfiguration:
-              issuer: https://vstoken.actions.githubusercontent.com
+              issuer: https://token.actions.githubusercontent.com
               audience: [sigstore] # at the time of writing this is the only audience GHA accepts
 
 Outputs:
