@@ -4,6 +4,9 @@ Parameters:
   RoleName: # see explanation below for explicit IAM role name rationale
     Type: String
     Default: GithubActions
+    Type: String
+  GithubOrgURL:
+    Type: CommaDelimitedList
   PermittedGithubOwner: # see below for explanation
     Type: String
   TagKeyPrefix: # see below for explanation
@@ -106,7 +109,7 @@ Resources:
             IdentitySource: $request.header.Authorization
             JwtConfiguration:
               issuer: https://token.actions.githubusercontent.com
-              audience: [sigstore] # at the time of writing this is the only audience GHA accepts
+              audience: !Ref GithubOrgURL
 
 Outputs:
   Function:
