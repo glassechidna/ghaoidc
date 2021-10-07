@@ -4,7 +4,6 @@ Parameters:
   RoleName: # see explanation below for explicit IAM role name rationale
     Type: String
     Default: GithubActions
-    Type: String
   GithubOrgURL:
     Type: CommaDelimitedList
   PermittedGithubOwner: # see below for explanation
