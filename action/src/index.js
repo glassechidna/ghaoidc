@@ -3,7 +3,7 @@ import fetch from "node-fetch";
 
 async function getJwt() {
     const { ACTIONS_ID_TOKEN_REQUEST_TOKEN, ACTIONS_ID_TOKEN_REQUEST_URL } = process.env;
-    const resp = await fetch(`${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sigstore`, {
+    const resp = await fetch(`${ACTIONS_ID_TOKEN_REQUEST_URL}`, {
         headers: {Authorization: `bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}`}
     });
 
