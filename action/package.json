@@ -11,7 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "@actions/core": "^1.5.0",
-    "node-fetch": "^3.0.0"
+    "node-fetch": "^3.1.1"
   },
   "devDependencies": {
     "esbuild": "^0.12.28"
